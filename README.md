@@ -30,11 +30,13 @@ Federal Reserve FOMC statements are scraped from `federalreserve.gov` using `req
 ### 2. Sentiment Scoring
 
 Each document is scored for hawkish/dovish/neutral content using weighted keyword matching against curated phrase dictionaries for monetary policy language. For each document $d$:
-
+ 
 $$S^{\text{hawk}}_d = \frac{\sum_{p \in \mathcal{H}} w_p \cdot c_p(d)}{\sum_{p \in \mathcal{H}} w_p \cdot c_p(d) + \sum_{p \in \mathcal{D}} w_p \cdot c_p(d)} \cdot \gamma(d)$$
-
-Where $\mathcal{H}$ and $\mathcal{D}$ are the hawkish and dovish phrase sets, $w_p$ is the phrase weight (1–3), $c_p(d)$ is the count of phrase $p$ in document $d$, and $\gamma(d) = \min\left(\frac{\text{total\_weight}}{30}, 1\right)$ is a confidence scalar that prevents low-match documents from producing extreme scores.
-
+ 
+Where $\mathcal{H}$ and $\mathcal{D}$ are the hawkish and dovish phrase sets, $w_p$ is the phrase weight (1–3), $c_p(d)$ is the count of phrase $p$ in document $d$, and $\gamma(d)$ is a confidence scalar that prevents low-match documents from producing extreme scores:
+ 
+$$\gamma(d) = \min\!\left(\frac{W(d)}{30},\; 1\right), \quad W(d) = \sum_{p \in \mathcal{H} \cup \mathcal{D}} w_p \cdot c_p(d)$$
+ 
 An initial deployment of FinBERT-Tone (`yiyanghkust/finbert-tone`) with an overlapping chunking algorithm (400 words, 50-word overlap) achieved only 33% accuracy on known policy events — the model was trained on financial news, not central bank language. The keyword scorer achieves 100%.
 
 ### 3. Time-Series Convergence
@@ -52,6 +54,9 @@ OLS regression with heteroskedasticity-robust standard errors (HC1) is run on lo
 $$r_t = \alpha + \beta_1 \Delta^{\text{hawk}}_{t-L} + \beta_2 \text{T10Y2Y}_{t-L} + \beta_3 \text{VIX}_{t-L} + \varepsilon_t$$
 
 Where $L$ is the lag in trading days. All independent variables are lagged to ensure no look-ahead bias. Regressions are tested at daily, weekly, and monthly frequencies, across subsamples (2016–2021, 2022–2026), and with forward return horizons from 1 to 60 days.
+
+![Backtest Results](visualizations/robustness_analysis.png)
+
 
 ### 5. Backtest
 
@@ -88,6 +93,9 @@ Horizon     Coefficient     t-stat      p-value     Sig
 
 The negative coefficient at the 40-day horizon indicates a mean-reversion dynamic: periods of extreme Fed hawkishness relative to the BoJ ($\Delta^{\text{hawk}} \gg 0$) predict subsequent USD/JPY depreciation over 2–3 months, consistent with positioning unwinds after the market fully prices the rate differential.
 
+![Backtest Results](visualizations/macro_alpha_proof_of_concept.png)
+
+
 ### Backtest Performance
 
 ```
@@ -103,7 +111,7 @@ Position Changes               28              N/A
 OOS Sharpe (2024+)          +0.11            +0.11
 ```
 
-![Backtest Results](backtest_results.png)
+![Backtest Results](visualizations/backtest_results.png)
 
 ### Multi-Frequency Regression
 
@@ -116,6 +124,9 @@ Divergence p-value             0.9122       0.8575       0.7733
 ```
 
 No significance at any standard frequency — expected for a macro signal tested against daily/weekly noise. The signal's edge is in the multi-lag structure, not the frequency decomposition.
+
+![Backtest Results](visualizations/multi_freq_analysis.png)
+
 
 ## Limitations
 
